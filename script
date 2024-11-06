@@ -29,7 +29,7 @@ fetch('fetch.php')
         const latestSoilValue = sensorData[0].soil;
         
         // Calculate hours until soil goes dry
-        const hoursUntilDry = (latestSoilValue - 60) / 0.59407;
+        const hoursUntilDry = (latestSoilValue - 60) / 0.69115;
         const dryMessage = `Please watering your plant within ${hoursUntilDry.toFixed(2)} hours`;
 
         // Update HTML for the current/latest sensor data
