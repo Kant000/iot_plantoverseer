@@ -1,0 +1,34 @@
+<?php
+// Make a connection to your database
+$dbConnection = new mysqli("mariadb", "root", "7YKyE8R2AhKzswfN", "test");
+
+if ($dbConnection->connect_error) {
+    echo json_encode(array("success" => false));
+    exit();
+}
+
+// Insert data into your database
+if(isset($_POST["temperature"]) && isset($_POST["soil"]) && isset($_POST["light"])) {
+  $t = $_POST["temperature"];
+  $s = $_POST["soil"];
+  $l = $_POST["light"];
+
+  $insertQuery = $dbConnection->query("INSERT INTO `id` (`soil`, `temperature`, `light`) VALUES ('$s', '$t', '$l');");
+
+  // Return if the insert was successful or not
+  if ($insertQuery === TRUE) {
+    echo json_encode(array(
+      "soil" => $s,
+      "temperature" => $t,
+      "light" => $l,
+      "success" => true
+    ));
+  } else {
+    echo json_encode(array("success" => false));
+  }
+} else {
+  echo json_encode(array("success" => false));
+}
+
+$dbConnection->close();
+?>
