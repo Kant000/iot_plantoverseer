@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plantoverseer</title>
+    <!--link rel="stylesheet" href="style.css"-->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js -->
+    <script src="script.js"></script> <!-- Your custom script file -->
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            scroll-behavior: smooth; /* Enables smooth scrolling */
+        }
+
+        /* Global container style to remove gaps between sections */
+        .container {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Adjust height for 1st and 2nd part to fit laptop screen */
+        .part-1, .part-2 {
+            display: flex;
+            justify-content: space-between;
+            height: 100vh; /* Adjusted to fit on a laptop screen */
+            padding: 0 50px;
+        }
+
+        .part-1 {
+            background-color: rgb(32, 13, 13);
+            color: white;
+        }
+
+        .part-2 {
+            background-color: rgb(58, 1, 1);
+            color: rgb(255, 255, 255);
+        }
+
+        .part-A, .part-B, .part-C {
+            display: flex;
+            justify-content: space-between;
+            height: 60vh; /* Full view height */
+            padding: 0 50px;
+        }
+
+        .part-A, .part-C {
+            background-color: rgb(32, 13, 13);
+            color: white;
+        }
+
+        .part-B {
+            background-color: rgb(58, 1, 1);
+            color: white;
+        }
+
+        .left-block, .right-block {
+            width: 45%;
+            margin: auto
+        }
+
+        .left-block h1, .right-block h1 {
+            color: yellow;
+            font-size: 86px;
+            padding: 0px;
+        }
+
+        .left-block p {
+            color: white;
+            margin: 10px 0;
+            padding: 10px;
+        }
+
+        .btn {
+            background-color: blue;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+            border-radius: 10px;
+        }
+
+        /* Center content in the left block for part-1 */
+        .part-1 .left-block {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .right-block img {
+            width: 100%;
+            height: auto;
+        }
+
+        .part-2-block {
+            background-color: yellow;
+            color: black;
+            width: 30%;
+            padding: 108px;
+            text-align: center;
+            cursor: pointer;
+            margin: auto;
+            border-radius: 10px;
+        }
+
+        .part-2-block h1 {
+            margin-top: 5px;
+            font-size: 54px;
+        }
+
+        .part-2-block p {
+            font-size: 16px;
+        }
+
+        .graph {
+            background-color: rgb(255, 255, 255);
+            height: 300px;
+            margin: 0;
+        }
+
+        .back-btn {
+            background-color: blue;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            display: block;
+            text-align: center;
+        }
+
+        .offset {
+            scroll-margin-top: 50px;
+            padding-top: 15%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Part 1 -->
+    <div class="container">
+        <div class="part-1" id="part-1">
+            <div class="left-block">
+                <h1>Plantoverseer</h1>
+                <p>Are you ready to see your plant's living conditions?</p>
+                <a href="#part-2"><button class="btn">Yes, let's go!</button></a>
+                <a href="#part-2"></a><button class="btn" onclick="activateBuzzer()">Activate Buzzer</button></a>
+            </div>
+            <div class="right-block">
+                <img src="assets/potten_plant.jpg" alt="Plant image">
+            </div>
+        </div>
+    </div>
+
+    <!-- Part 2 -->
+    <div class="container">
+        <div class="part-2" id="part-2">
+            <a href="#part-A" class="offset">
+                <div class="part-2-block">
+                    <h1><span id="temp-display">Loading...</span>°C</h1>
+                    <p>Temperature:</p>
+                </div>
+            </a>
+            <a href="#part-B" class="offset">
+                <div class="part-2-block">
+                    <h1><span id="soil-display">Loading...</span>%</h1>
+                    <p>Soil Moisture: <span id="soil-display"></span></p>
+                    <h3 id="dry-soil-message"></h3>
+                </div>
+            </a>
+            <a href="#part-C" class="offset">
+                <div class="part-2-block">
+                    <h1><span id="light-display">Loading...</span></h1>
+                    <p>Light Levels:</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Part A -->
+    <div class="container">
+        <div class="part-A" id="part-A">
+            <div class="left-block">
+                <div class="graph">
+                    <canvas id="tempChart"></canvas> <!-- Canvas for temperature graph -->
+                </div>
+            </div>
+            <div class="right-block">
+                <h1><span id="temp-display-partA">Loading...</span>°C</h1>
+                <h3>Temperature</h3>
+                <p>The device will warn you when the temperature is lower than 15 or higher than 24</p>
+                <a href="#part-2" class="btn">Back to Part 2</a> <!-- Back to Part 2 Button -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Part B -->
+    <div class="container">
+        <div class="part-B" id="part-B">
+            <div class="left-block">
+                <h1><span id="soil-display-partB">Loading...</span>%</h1>
+                <h3>Soil Moisture</h3>
+                <p>The device will warn you when the soil moisture is lower than 60%</p>
+                <a href="#part-2" class="btn">Back to Part 2</a> <!-- Back to Part 2 Button -->
+            </div>
+            <div class="right-block">
+                <div class="graph">
+                    <canvas id="soilChart"></canvas> <!-- Canvas for soil moisture graph -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Part C -->
+    <div class="container">
+        <div class="part-C" id="part-C">
+            <div class="left-block">
+                <div class="graph">
+                    <canvas id="lightChart"></canvas> <!-- Canvas for light level graph -->
+                </div>
+            </div>
+            <div class="right-block">
+                <h1><span id="light-display-partC">Loading...</span></h1>
+                <h3>Light Levels</h3>
+                <a href="#part-2" class="btn">Back to Part 2</a> <!-- Back to Part 2 Button -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>
