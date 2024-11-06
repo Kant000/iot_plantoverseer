@@ -1,0 +1,199 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <ESP8266WebServer.h>
+#include <WiFiClient.h>
+#include <WiFiManager.h>
+#include <DHT.h> 
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>  // Library for LCD with I2C
+
+#define DHTPIN 2 
+#define DHTTYPE DHT11 
+
+DHT dht11(DHTPIN, DHTTYPE); 
+
+String URL = "http://192.168.0.111/api.php"; 
+
+// Sensor's configuration
+int photoPin = 16;             // Pin where the photoresistor is connected
+int soilPin = A0;              // Pin where the soil moisture sensor is connected
+int soilPower = 15;            // Variable for Soil moisture Power
+int ledPin = 12;               // Pin where the LED is connected
+int buzPin = 13;               // Pin where the buzzer is connected
+
+int val = 0;                   // value for storing moisture value 
+float temperature = 0;
+int soil = 0;
+int light = 0;
+
+// LCD configuration
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // Set the LCD address (0x27) and size (16 chars, 2 lines)
+
+WiFiClient client;  // Create a WiFiClient instance
+ESP8266WebServer server(80);
+
+// Variables for time tracking
+unsigned long previousDATAMillis = 0;
+const long DATAInterval = 896000; // 15 minutes 896000
+
+int readSoil() {
+    digitalWrite(soilPower, HIGH); // turn D7 "On"
+    delay(10);                     // wait 10 milliseconds 
+    float val = analogRead(soilPin); // Read the SIG value from sensor 
+    int ana = map(val, 950, 250, 0, 100); // make difference bigger map(val, 224, 974, 100, 0)
+    digitalWrite(soilPower, LOW); // turn D7 "Off"
+    return ana;                   // send current moisture value
+}
+
+void setup() {
+  Serial.begin(115200);
+  dht11.begin(); 
+  connectWiFi();
+  lcd.init();                     // Initialize the LCD
+  lcd.backlight();                // Turn on the LCD backlight
+  pinMode(photoPin, INPUT);       // Set the photoPin as an input
+  pinMode(ledPin, OUTPUT);        // Set the ledPin as an output
+  pinMode(buzPin, OUTPUT);        // Set the buzPin as an output
+  pinMode(soilPin, INPUT);        // Set the photoPin as an input
+  pinMode(soilPower, OUTPUT);     // Set D7 as an OUTPUT
+  digitalWrite(soilPower, LOW);   // Set to LOW so no power is flowing through the sensor
+  server.on("/activateBuzzer", []() {
+    tone(buzPin, 700);  // Start the buzzer at 700 Hz
+    delay(2000);        // Keep the buzzer on for 1 second
+    noTone(buzPin);     // Stop the buzzer
+    server.send(200, "text/plain", "Buzzer activated at 700 Hz");
+
+  });
+  Serial.println(WiFi.localIP());
+  server.begin();
+}
+
+void loop() {
+  if(WiFi.status() != WL_CONNECTED) {
+    connectWiFi();
+  }
+
+  server.handleClient();
+
+  Load_Data();
+  String postData = "temperature=" + String(temperature) + "&soil=" + String(soil) + "&light=" + String(light);
+
+  unsigned long currentMillis = millis();  // Current time
+
+  // Check conditions and control LED/buzzer accordingly
+  if (soil <= 60 && (temperature <= 15 || temperature >= 24 )) {
+    digitalWrite(ledPin, HIGH);  // Turn on LED
+    tone(buzPin, 1000);           // Turn on buzzer with a 1000Hz tone
+  }  
+  else if (soil >= 60 && (temperature <= 15 || temperature >= 24 )) {
+    digitalWrite(ledPin, HIGH);  // Turn on LED
+    tone(buzPin, 500);           // Turn on buzzer with a 500Hz tone
+  } 
+  else if (soil <= 60 && (temperature >= 15 && temperature <= 24 )) {
+    digitalWrite(ledPin, HIGH);  // Turn on LED
+    tone(buzPin, 100);           // Turn on buzzer with a 100Hz tone
+  } 
+  else {
+    digitalWrite(ledPin, LOW);   // Turn off LED
+    digitalWrite(buzPin, LOW);   // Turn off buzzer
+  }
+
+  // Display readings on the LCD
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Temp: ");
+  lcd.print(temperature);
+  lcd.print(" C");
+
+  lcd.setCursor(0, 1);
+  lcd.print("Light: ");
+  lcd.print(light ? "Bright" : "Dark");
+
+  delay(3000);
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Soil: ");
+  lcd.print(soil);
+  lcd.print(" %");
+
+  if (soil >= 60 && (temperature >= 15 && temperature <= 24 )) {
+    lcd.setCursor(0, 1);
+    lcd.print("I am good");
+  } 
+  else if (soil <= 60 && (temperature >= 15 && temperature <= 24 )) {
+    lcd.setCursor(0, 1);
+    lcd.print("I need water");
+  } 
+  else if (soil >= 60 && temperature <= 15) {
+    lcd.setCursor(0, 1);
+    lcd.print("I am freezing!!");
+  } 
+  else if (soil >= 60 && temperature >= 24) {
+    lcd.setCursor(0, 1);
+    lcd.print("I am burning!!");
+  } 
+  else {
+    lcd.setCursor(3, 1);
+    lcd.print("Help!!!");
+  }
+
+  delay(3000);
+
+  if (currentMillis - previousDATAMillis >= DATAInterval) {
+    previousDATAMillis = currentMillis;
+    HTTPClient http;
+    http.begin(client, URL);
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    
+    int httpCode = http.POST(postData);
+    String payload = "";
+
+    if(httpCode > 0) {
+      if(httpCode == HTTP_CODE_OK) {
+        String payload = http.getString();
+        Serial.println(payload);
+      } else {
+        Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+      }
+    } else {
+      Serial.printf("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
+    }
+    
+    http.end();
+
+    Serial.print("URL : "); Serial.println(URL); 
+    Serial.print("Data: "); Serial.println(postData);
+    Serial.print("httpCode: "); Serial.println(httpCode);
+    Serial.print("payload : "); Serial.println(payload);
+    Serial.println("--------------------------------------------------");
+  }
+}
+
+void Load_Data() {
+  temperature = dht11.readTemperature(); // Celsius
+  soil = readSoil();
+  light = digitalRead(photoPin);
+  if (isnan(temperature) || isnan(soil) || isnan(light)) {
+    Serial.println("Failed to read from sensor!");
+    temperature = 0;
+    soil = 0;
+    light = 0;
+  } else {
+    Serial.printf("Temperature: %.2f °C\n", temperature);
+    Serial.printf("Soil: %d %%\n", soil);
+    Serial.print("Light: ");
+    Serial.println(light ? "Light" : "Dark");
+  }  
+}
+
+void connectWiFi() {
+  WiFiManager wifiManager;
+  if (!wifiManager.autoConnect("PlantOverseerAP", "password")) {
+    Serial.println("Failed to connect and hit timeout");
+    ESP.restart();
+  }
+  Serial.println("Connected to WiFi");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+}
