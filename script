@@ -1,0 +1,131 @@
+// Fetch data from the PHP script
+function activateBuzzer() {
+fetch('http://192.168.0.112/activateBuzzer')
+    .then(response => {
+        if (response.ok) {
+            console.log('Buzzer activated!');
+        } else {
+            console.error('Failed to activate buzzer.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+fetch('fetch.php')
+.then(response => response.json())
+.then(data => {
+    if (data.success) {
+        const sensorData = data.data;
+
+        // Extract relevant data
+        const temperatures = sensorData.map(entry => entry.temperature);
+        const soilMoisture = sensorData.map(entry => entry.soil);
+        const lightLevels = sensorData.map(entry => entry.light);
+        const times = sensorData.map(entry => entry.time);
+
+        // Get the latest soil moisture value
+        const latestSoilValue = sensorData[0].soil;
+        
+        // Calculate hours until soil goes dry
+        const hoursUntilDry = (latestSoilValue - 60) / 0.59407;
+        const dryMessage = `Please watering your plant within ${hoursUntilDry.toFixed(2)} hours`;
+
+        // Update HTML for the current/latest sensor data
+        document.getElementById('temp-display').textContent = sensorData[0].temperature;
+        document.getElementById('soil-display').textContent = latestSoilValue;
+        document.getElementById('light-display').textContent = sensorData[0].light === '1' ? 'Bright' : 'Dark';
+        document.getElementById('temp-display-partA').textContent = sensorData[0].temperature;
+        document.getElementById('soil-display-partB').textContent = latestSoilValue;
+        document.getElementById('light-display-partC').textContent = sensorData[0].light === '1' ? 'Bright' : 'Dark';
+        document.getElementById('dry-soil-message').textContent = dryMessage;
+
+        // Check if soil moisture is below the threshold and activate buzzer if needed
+        if (latestSoilValue < 40) {  // You can adjust this threshold
+            activateBuzzer();
+        }
+
+        // Create temperature chart
+        new Chart(document.getElementById('tempChart'), {
+            type: 'line',
+            data: {
+                labels: times, // Use time-only data for x-axis labels
+                datasets: [{
+                    label: 'Temperature (°C)',
+                    data: temperatures,
+                    borderColor: 'rgba(0, 0, 0, 1)',
+                    borderWidth: 1,
+                    fill: true
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Time' },
+                        reverse: true
+                    },
+                    y: {
+                        title: { display: true, text: 'Temperature (°C)' }
+                    }
+                }
+            }
+        });
+
+        // Create soil moisture chart
+        new Chart(document.getElementById('soilChart'), {
+            type: 'line',
+            data: {
+                labels: times,
+                datasets: [{
+                    label: 'Soil Moisture',
+                    data: soilMoisture,
+                    borderColor: 'rgba(0, 0, 0, 1)',
+                    borderWidth: 1,
+                    fill: true
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Time' },
+                        reverse: true
+                    },
+                    y: {
+                        title: { display: true, text: 'Soil Moisture' }
+                    }
+                }
+            }
+        });
+
+        // Create light level chart
+        new Chart(document.getElementById('lightChart'), {
+            type: 'line',
+            data: {
+                labels: times,
+                datasets: [{
+                    label: 'Light Level',
+                    data: lightLevels,
+                    borderColor: 'rgba(0, 0, 0, 1)',
+                    borderWidth: 1,
+                    fill: true
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Time' },
+                        reverse: true
+                    },
+                    y: {
+                        title: { display: true, text: 'Light Level' }
+                    }
+                }
+            }
+        });
+
+    } else {
+        console.error('Data fetch error:', data.error || 'Unknown error');
+    }
+})
+.catch(error => console.error('Fetch error:', error));
